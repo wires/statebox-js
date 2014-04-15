@@ -87,10 +87,101 @@ Petrinet = {
 }
 ```
 
+#### Short note on javascript
+
+It sucks. So does coffee script. Ok, fine. This shit is workable.
+But come one, for this stuff you want typeclasses & monoids and fun.
+Look at that `.isNumber` and `.isArray` code.
+
 #### Specifying a marking or multiset.
 
-{}
+You give a dictionary from places to an array of tokens in that place.
 
+    m = {A: [{},{}], B: [{}]}
+
+These should be integers, if the collection of places is an array.
+
+    m = {1: [{},{}], 2: [{}]}
+
+If all you care about are empty tokens, you might as well just give a number
+
+    m = {A: 2, B: 1}
+    m = {1: 2, 2: 1}
+
+You can even mix this, but try no to do that, it's weird.
+
+    # TODO this might lead to bugs at the moment
+    m = {A: 2, B: [{}]}
+
+##### Functions on multisets
+
+We define *>*, *-* and *+*, `gt`, `subtract` and `add` for
+
+    class MultiSet
+        constructor: (@M) ->
+            # w00t
+
+A helper function to give the multiplicity of an entry in our multiset.
+
+        _multiplicity: (key) ->
+            elt = @M[key]
+
+            # the array size is the nr of tokens
+            if (_.isArray elt)
+                _.size elt
+
+            # nr of tokens is given directly or key is missing
+            elt
+
+This multiset is bigger then the other if all of that other multisets'
+keys are in our set, and our multiplicity is `>=` theirs. In code,
+
+        gte: (other) ->
+            (_ other.M .keys)
+                .map (i) ->
+                    a = this._multiplicity i)
+                    b = (other._multiplicty i)
+                    (not a and not b) or (a >= b)
+                .all
+
+Some shit to deal with polymorphic entries (lists or numbers).
+
+        _add: (key, elts) ->
+
+            A = @M[key]
+            B = elts
+
+            listA = _.isArray A
+            numA = _.isNumber A
+            listB = _.isArray B
+            numB = _.isNumber B
+
+            if (listA and listB)
+                A.concat B
+
+            if (numA and numB)
+                A + B
+
+            # list [{}, ..., {}] of size n
+            toList = (n) -> _(n).range().map(-> {})
+
+            if (listA and numB)
+                A.concat(toList numB)
+
+            if (numA and listB)
+                (toList numA).concat B
+
+Now adding is simple.
+
+        add: (other) ->
+            mm = _.map other.M, (val, key) ->
+                this._add(key, val)
+
+            new MultiSet (_.extend (_.clone @M) mm)
+
+Although this is inefficient.
+
+### Describing a whole net
 
 Lets create a simple net `()-->[]-->()`. Every ALLCAPS key is
 an identifier you can freely choose.
@@ -190,11 +281,6 @@ So those three are related once
     m0 -- t --> m1   <=>  m0 > t.pre  /\  m1 = m0 - t.pre + t.post
 ```
 Now this only makes sense once we define `gt`, `subtract` and `add` for markings and `pre`/`post`.
-
-#### Multiset operations
-
-So just as a refresher, we can to compare markings `{ A: [{},{}] }`.
-
 
 Alright, so lets first create our initial marking.
 
